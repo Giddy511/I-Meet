@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="p-6 rounded shadow" data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-black text-white">
+  <h2 class="text-xl font-semibold mb-4" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Admin Dashboard</h2>
+  <p class="mb-4" data-admin-theme-light="text-gray-700" data-admin-theme-dark="text-gray-300">Analytics by creator are shown below. For administrative actions (create creators, remove media) go to the <a class="text-blue-400 underline" href="{{ url_for('admin_actions') }}">Admin Actions</a> page.</p>
+
+  <section class="mb-6">
+    <h3 class="font-medium mb-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Creators Analytics (sorted by posts)</h3>
+    <div class="overflow-x-auto">
+      <table class="min-w-full table-auto border-collapse">
+        <thead>
+          <tr data-admin-theme-light="bg-gray-100" data-admin-theme-dark="bg-gray-800">
+            <th class="px-4 py-2 text-left" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Creator</th>
+            <th class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Posts</th>
+            <th class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Avg Rating</th>
+            <th class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Likes</th>
+            <th class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Reactions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in creators_analytics %}
+          <tr class="border-t" data-admin-theme-light="border-t" data-admin-theme-dark="border-t border-gray-700">
+            <td class="px-4 py-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">{{ c.username }}</td>
+            <td class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">{{ c.media_count }}</td>
+            <td class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">{{ c.avg_rating if c.avg_rating is not none else '-' }}</td>
+            <td class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">{{ c.likes_count }}</td>
+            <td class="px-4 py-2 text-right" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">{{ c.reactions_count }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="px-4 py-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">No creators found</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<!-- Analytics section -->
+<div class="p-6 rounded shadow mt-6" data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-black text-white">
+  <h2 class="text-xl font-semibold mb-4" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Analytics</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <h4 class="font-medium mb-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Users by Role</h4>
+      <canvas id="rolesChart" height="180"></canvas>
+    </div>
+    <div>
+      <h4 class="font-medium mb-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Reactions Breakdown</h4>
+      <canvas id="reactionsChart" height="180"></canvas>
+    </div>
+    <div>
+      <h4 class="font-medium mb-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Top Creators (by posts)</h4>
+      <canvas id="creatorsChart" height="180"></canvas>
+    </div>
+    <div>
+      <h4 class="font-medium mb-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Ratings Distribution</h4>
+      <canvas id="ratingsChart" height="180"></canvas>
+    </div>
+    <div class="md:col-span-2">
+      <h4 class="font-medium mb-2" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">Comments (last 14 days)</h4>
+      <canvas id="commentsChart" height="120"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="admin-data" type="application/json">
+{{ {
+  'roles_data': roles_data,
+  'reactions_data': reactions_data,
+  'creators_analytics': creators_analytics,
+  'ratings_hist': ratings_hist,
+  'comments_time': comments_time
+}|tojson | safe }}
+</script>
+<script>
+  // helper to build datasets from passed data (read from #admin-data to avoid inline Jinja in scripts)
+  const _adminDataEl = document.getElementById('admin-data');
+  const _adminData = _adminDataEl ? JSON.parse(_adminDataEl.textContent || '{}') : {};
+  const rolesData = _adminData.roles_data || [];
+  const reactionsData = _adminData.reactions_data || [];
+  const creatorsAnalytics = _adminData.creators_analytics || [];
+  const ratingsHist = _adminData.ratings_hist || [];
+  const commentsTime = _adminData.comments_time || [];
+
+  // Chart.js dark-theme base options
+  const darkOptionsBase = {
+    plugins: {
+      legend: { labels: { color: '#ffffff' } },
+      title: { color: '#ffffff' }
+    },
+    scales: {
+      x: { ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+    }
+  };
+
+  // Users by role (pie)
+  const rolesLabels = rolesData.map(r => r.role);
+  const rolesCounts = rolesData.map(r => r.count);
+  new Chart(document.getElementById('rolesChart'), {
+    type: 'pie',
+    data: { labels: rolesLabels, datasets: [{ data: rolesCounts, backgroundColor: ['#60A5FA','#34D399','#F97316','#A78BFA'] }] },
+    options: { plugins: { legend: { labels: { color: '#fff' } } } }
+  });
+
+  // Reactions breakdown (doughnut)
+  const reacLabels = reactionsData.map(r => r.type);
+  const reacCounts = reactionsData.map(r => r.count);
+  new Chart(document.getElementById('reactionsChart'), {
+    type: 'doughnut',
+    data: { labels: reacLabels, datasets: [{ data: reacCounts, backgroundColor: ['#10B981','#EF4444','#F59E0B','#8B5CF6','#3B82F6'] }] },
+    options: { plugins: { legend: { labels: { color: '#fff' } } } }
+  });
+
+  // Top creators (bar)
+  const creatorsLabels = creatorsAnalytics.map(t => t.username);
+  const creatorsCounts = creatorsAnalytics.map(t => t.media_count);
+  new Chart(document.getElementById('creatorsChart'), {
+    type: 'bar',
+    data: { labels: creatorsLabels, datasets: [{ label: 'Posts', data: creatorsCounts, backgroundColor: '#60A5FA' }] },
+    options: Object.assign({}, darkOptionsBase, { indexAxis: 'y' })
+  });
+
+  // Ratings distribution (bar)
+  const ratingsLabels = ratingsHist.map(r => r.rating);
+  const ratingsCounts = ratingsHist.map(r => r.count);
+  new Chart(document.getElementById('ratingsChart'), {
+    type: 'bar',
+    data: { labels: ratingsLabels, datasets: [{ label: 'Ratings', data: ratingsCounts, backgroundColor: '#F59E0B' }] },
+    options: darkOptionsBase
+  });
+
+  // Comments trend (line)
+  const cLabels = commentsTime.map(c => c.date);
+  const cCounts = commentsTime.map(c => c.count);
+  new Chart(document.getElementById('commentsChart'), {
+    type: 'line',
+    data: { labels: cLabels, datasets: [{ label: 'Comments', data: cCounts, borderColor: '#34D399', backgroundColor: 'rgba(52,211,153,0.15)', fill: true }] },
+    options: Object.assign({}, darkOptionsBase, { scales: { x: { ticks: { maxRotation: 0, minRotation: 0, color: '#fff' }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.04)' } } } })
+  });
+</script>
+{% endblock %}

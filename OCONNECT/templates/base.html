@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}CONNECT{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Small utility to improve the transition start state for flash items */
+    .flash-item { opacity: 1; }
+    /* Dark theme overrides when body[data-theme="dark"] is active.
+       These are minimal overrides to make common white containers and black text readable.
+       We use !important sparingly to override Tailwind utility classes where needed. */
+    body[data-theme="dark"] { background-color: #1a035a !important; color: #fff; }
+    body[data-theme="dark"] header { background-color: #000000 !important; }
+    body[data-theme="dark"] main { background-color: transparent !important; }
+    body[data-theme="dark"] .bg-white { background-color: #0b0b0b !important; }
+    body[data-theme="dark"] .text-black { color: #fff !important; }
+    body[data-theme="dark"] .text-gray-600 { color: #9ca3af !important; }
+    body[data-theme="dark"] .text-gray-700 { color: #d1d5db !important; }
+    body[data-theme="dark"] .border { border-color: rgba(255,255,255,0.06) !important; }
+    /* Ensure form controls are readable in dark theme */
+    body[data-theme="dark"] input,
+    body[data-theme="dark"] textarea,
+    body[data-theme="dark"] select {
+      background-color: rgba(255,255,255,0.03) !important;
+      color: #e5e7eb !important; /* gray-200 */
+      border-color: rgba(255,255,255,0.08) !important;
+    }
+    body[data-theme="dark"] input::placeholder,
+    body[data-theme="dark"] textarea::placeholder {
+      color: rgba(229,231,235,0.6) !important; /* lighter placeholder */
+    }
+    /* Buttons inside inputs (password toggle) */
+    .password-toggle {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      padding: 0.25rem;
+      cursor: pointer;
+      color: rgba(0,0,0,0.6);
+    }
+    body[data-theme="dark"] .password-toggle { color: rgba(255,255,255,0.8); }
+    .input-with-toggle { position: relative; }
+  </style>
+</head>
+<body class="min-h-screen font-sans text-white " data-theme="dark" data-user-id="{{ session.get('id')|default(0) }}">
+  <div class="flex min-h-screen">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-64 bg-black text-white transition-transform duration-300 transform -translate-x-full lg:translate-x-0 fixed lg:static h-screen overflow-y-auto z-40">
+      <div class="p-4 border-b border-gray-700">
+
+                  <img src="/static/images/LOGO.png" alt="CONNECT logo" class="w-10 h-10 object-cover rounded-md shadow" />
+
+        <h2 class="text-xl font-bold text-blue-400">CONNECT</h2>
+      </div>
+      <nav class="p-4 space-y-2">
+        {% if session.get('logged_in') %}
+          <!-- Logged in user navigation -->
+          {% if session.get('role') == 'admin' %}
+            <a href="{{ url_for('admin') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">📊 Admin Dashboard</a>
+            <a href="{{ url_for('admin_actions') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">⚙️ Manage Users</a>
+          {% elif session.get('role') == 'creator' %}
+            <a href="{{ url_for('creator_upload') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">📤 Upload</a>
+            <a href="{{ url_for('Home') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">🏠 Home</a>
+          {% else %}
+            <a href="{{ url_for('Home') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">🏠 Home</a>
+            <a href="{{ url_for('notifications') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">🔔 Notifications</a>
+          {% endif %}
+          <div class="border-t border-gray-700 my-2"></div>
+          <div class="px-4 py-2 text-sm text-gray-400">{{ session.get('user') }}</div>
+          <a href="{{ url_for('logout') }}" class="block px-4 py-2 rounded hover:bg-red-900 transition text-red-400">🚪 Logout</a>
+        {% else %}
+          <!-- Not logged in navigation -->
+          <a href="{{ url_for('signup') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">📝 Sign up</a>
+          <a href="{{ url_for('Login') }}" class="block px-4 py-2 rounded hover:bg-gray-700 transition">🔐 Login</a>
+        {% endif %}
+      </nav>
+    </aside>
+
+    <!-- Main content area -->
+    <div class="flex-1 flex flex-col">
+      <!-- Top header -->
+      <header class="bg-blue-500 text-white shadow">
+        <div class="px-4 py-2 flex items-center justify-between">
+          <button id="sidebar-toggle" class="lg:hidden text-white hover:text-gray-300 p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <!-- <img src="{{ LOGO_PATH }}" alt="CONNECT logo" class="w-10 h-10 object-cover rounded-md shadow" /> -->
+          <nav class="space-x-2 text-sm">
+        <!-- {% if session.get('logged_in') %}
+                  <span class=" text-red-300">{{ session.get('user') }}</span>
+
+          <div class="relative inline-block ml-3" id="notif-root">
+            <button id="notif-toggle" class="relative text-white hover:text-gray-300 focus:outline-none" aria-haspopup="true" aria-expanded="false" title="Notifications">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {% if unread_notifications and unread_notifications > 0 %}
+                <span id="notif-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">{{ unread_notifications }}</span>
+              {% else %}
+                <span id="notif-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">0</span>
+              {% endif %}
+            </button>
+
+            <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-96 bg-white border rounded shadow-lg z-50 overflow-hidden"
+                 data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-gray-900 text-white">
+              <div class="p-3 border-b flex items-center justify-between">
+                <div class="font-semibold">Notifications</div>
+                <button id="notif-mark-read" class="text-sm text-gray-500 hover:text-gray-700">Mark all read</button>
+              </div>
+              <div id="notif-list" class="max-h-80 overflow-auto"></div>
+              <div id="notif-empty" class="p-4 text-center text-gray-600 hidden">No notifications</div>
+            </div>
+          </div>
+
+          {% if session.get('role') == 'admin' %}
+            <a href="{{ url_for('admin') }}" class="text-white hover:text-gray-900">Admin</a>
+          
+          {% elif session.get('role') == 'creator' %}
+            <a href="{{ url_for('creator_upload') }}" class="text-white hover:text-gray-900">Creator</a>
+          {% else %}
+            <a href="{{ url_for('Home') }}" class="text-white hover:text-gray-900">Home</a>
+          {% endif %} -->
+          <!-- <label for="site-theme-switch" class="inline-flex items-center ml-3 cursor-pointer">
+            <input id="site-theme-switch" type="checkbox" class="sr-only">
+            <span class="w-10 h-6 bg-gray-300 rounded-full relative transition-colors duration-200" aria-hidden="true">
+              <span class="dot absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200"></span>
+            </span> 
+            <span class="ml-2 text-sm text-gray-200">Theme</span> 
+          </label>
+          <span class="text-white">|</span>
+          <a href="{{ url_for('logout') }}" class="text-red-400 hover:text-gray-900 ml-3">Logout</a>
+        {% else %}
+          <a href="{{ url_for('signup') }}" class="text-white hover:text-gray-900">Sign up</a>
+          <a href="{{ url_for('Login') }}" class="text-white hover:text-gray-900">Login</a>
+        {% endif %}
+          </nav>
+        </div>-->
+      </header>
+      <hr>
+      <hr>
+      <hr>
+
+      <main class="flex-1 max-w-4xl mx-auto px-4 py-4 w-full">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div id="flash-container" class="space-y-2">
+          {% for category, message in messages %}
+            <div class="flash-item flex items-start justify-between rounded-md p-4 shadow-md transition-transform duration-300"
+                 data-auto-dismiss="4000">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 flex items-center justify-center rounded-full {% if category == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                  {% if category == 'success' %}✓{% else %}!{% endif %}
+                </div>
+                <div class="text-sm {% if category == 'success' %}text-white{% else %}text-red-800{% endif %}">{{ message }}</div>
+              </div>
+              <button type="button" class="close-btn text-gray-500 hover:text-gray-700" aria-label="Close">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    // Auto-dismiss and manual dismiss for flash messages with a smooth fade/slide
+    document.addEventListener('DOMContentLoaded', function(){
+      const container = document.getElementById('flash-container');
+      if(!container) return;
+      const items = Array.from(container.querySelectorAll('.flash-item'));
+      items.forEach(item => {
+        const btn = item.querySelector('.close-btn');
+        const delay = parseInt(item.getAttribute('data-auto-dismiss') || 4000, 10);
+
+        function hide() {
+          item.style.transition = 'opacity 300ms ease, transform 300ms ease';
+          item.style.opacity = '0';
+          item.style.transform = 'translateY(-8px) scale(0.98)';
+          setTimeout(() => item.remove(), 320);
+        }
+
+        if (btn) btn.addEventListener('click', hide);
+        setTimeout(hide, delay);
+      });
+    });
+  </script>
+  <!-- Chat removed from project -->
+  <script>
+    // Delegated handler for Share buttons (copy link or share via in-app message)
+    document.addEventListener('click', async function(ev){
+      const target = ev.target.closest && ev.target.closest('.share-btn, #share-this');
+      if(!target) return;
+      ev.preventDefault();
+      // If user not logged in, redirect to login page
+      const userId = document.body.dataset.userId || '0';
+      if(!userId || userId === '0' || userId === 0){
+        window.location = {{ url_for('Login')|tojson }};
+        return;
+      }
+      const mediaId = target.dataset.mediaId;
+      const mediaUrl = target.dataset.mediaUrl;
+      if(!mediaId || !mediaUrl){
+        alert('Share not available');
+        return;
+      }
+
+      // Ask user whether to copy link or share to someone
+      const doCopy = confirm('Click OK to copy link to clipboard, Cancel to share to a user');
+      if(doCopy){
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          try{ await navigator.clipboard.writeText(mediaUrl); alert('Link copied to clipboard'); }
+          catch(e){ prompt('Copy this link:', mediaUrl); }
+        } else {
+          prompt('Copy this link:', mediaUrl);
+        }
+        return;
+      }
+
+      const recip = prompt('Enter recipient username or user id to share with:');
+      if(!recip) return;
+
+      // send share request
+      try{
+        const res = await fetch('/share/' + encodeURIComponent(mediaId), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: recip })
+        });
+        const j = await res.json();
+        if(res.ok && j.ok){
+            // update only matching share-counts within the same media container
+            try{
+              if(j.share_count !== undefined){
+                // update on media-detail page (single element)
+                const single = document.querySelector('.share-count[data-media-id="' + mediaId + '"]');
+                if(single) single.textContent = j.share_count;
+                // update any share-count elements inside cards that have data-media-id
+                document.querySelectorAll('[data-media-id="' + mediaId + '"] .share-count').forEach(sc => { sc.textContent = j.share_count; });
+                // fallback: update any .share-count with matching numeric content (best-effort)
+              }
+            }catch(e){ console.error('Update share-count failed', e); }
+          alert('Shared successfully');
+        } else {
+          alert('Share failed: ' + (j.error || res.status));
+        }
+      }catch(e){ console.error('Share request failed', e); alert('Share failed'); }
+    });
+  </script>
+  <script>
+    // Notifications dropdown: fetch notifications via AJAX and render in the header dropdown.
+    (function(){
+      function qs(sel, root=document) { return root.querySelector(sel); }
+      function qsa(sel, root=document) { return Array.from(root.querySelectorAll(sel)); }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        const toggle = qs('#notif-toggle');
+        const dropdown = qs('#notif-dropdown');
+        const list = qs('#notif-list');
+        const empty = qs('#notif-empty');
+        const badge = qs('#notif-badge');
+        const markAllBtn = qs('#notif-mark-read');
+
+        if(!toggle || !dropdown) return;
+
+        let open = false;
+
+        async function fetchNotes(){
+          try{
+            const res = await fetch({{ url_for('notifications_json')|tojson }});
+            if(!res.ok) return null;
+            const j = await res.json();
+            return j;
+          }catch(e){ console.error('Failed to fetch notifications', e); return null; }
+        }
+
+        function renderNotificationItem(n){
+          const el = document.createElement('div');
+          el.className = 'p-3 border-b flex items-start justify-between';
+          const left = document.createElement('div');
+          left.className = 'text-sm';
+          const msg = document.createElement('div'); msg.className='mb-1'; msg.textContent = n.message;
+          const when = document.createElement('div'); when.className='text-xs text-gray-500'; when.textContent = n.created_at || '';
+          left.appendChild(msg); left.appendChild(when);
+          const right = document.createElement('div'); right.className='ml-3 flex-shrink-0';
+          if(n.target_url){
+            const a = document.createElement('a'); a.className='text-blue-600 hover:underline text-sm'; a.textContent='Open';
+            a.href = n.target_url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            // mark individual as read when clicked (fire-and-forget)
+            a.addEventListener('click', async function(){
+              try{ await fetch({{ url_for('notifications_mark_read', notif_id=0)|tojson }}.replace('/0', '/' + n.id), {method: 'POST'}); }
+              catch(e){}
+            });
+            right.appendChild(a);
+          }
+          el.appendChild(left); el.appendChild(right);
+          return el;
+        }
+
+        async function openDropdown(){
+          const data = await fetchNotes();
+          if(!data) return;
+          list.innerHTML = '';
+          if(data.notifications && data.notifications.length){
+            data.notifications.forEach(n => {
+              const item = renderNotificationItem(n);
+              list.appendChild(item);
+            });
+            empty.classList.add('hidden');
+          } else {
+            empty.classList.remove('hidden');
+          }
+          // update badge
+          if(data.unread && data.unread > 0){
+            badge.classList.remove('hidden'); badge.textContent = data.unread;
+          } else {
+            badge.classList.add('hidden');
+          }
+          dropdown.classList.remove('hidden');
+          toggle.setAttribute('aria-expanded', 'true');
+          open = true;
+        }
+
+        async function closeDropdown(){
+          dropdown.classList.add('hidden');
+          toggle.setAttribute('aria-expanded', 'false');
+          open = false;
+        }
+
+        // toggle handler: open fetches and shows; also mark all read when opened so badge clears
+        toggle.addEventListener('click', async function(e){
+          e.preventDefault();
+          if(open){ return closeDropdown(); }
+          await openDropdown();
+          // mark all read on dropdown open
+          try{
+            await fetch({{ url_for('notifications_mark_all_read')|tojson }}, {method: 'POST'});
+            if(badge) { badge.classList.add('hidden'); }
+          }catch(e){ }
+        });
+
+        // mark all read button inside dropdown
+        if(markAllBtn){
+          markAllBtn.addEventListener('click', async function(e){
+            e.preventDefault();
+            try{
+              const res = await fetch({{ url_for('notifications_mark_all_read')|tojson }}, {method: 'POST'});
+              if(res.ok){
+                // clear badge and visually mark items (we'll simply remove unread styling by reloading)
+                badge.classList.add('hidden');
+                await openDropdown();
+              }
+            }catch(e){ }
+          });
+        }
+
+        // close when clicking outside
+        document.addEventListener('click', function(ev){
+          if(!open) return;
+          const root = qs('#notif-root');
+          if(root && !root.contains(ev.target)) closeDropdown();
+        });
+      });
+    })();
+    // Add a small password 'show' toggle to any input[type=password]
+    document.addEventListener('DOMContentLoaded', function(){
+      try {
+        const pwInputs = Array.from(document.querySelectorAll('input[type="password"]'));
+        pwInputs.forEach(input => {
+          // avoid adding multiple toggles
+          if (input.dataset.pwToggleAdded) return;
+          input.dataset.pwToggleAdded = '1';
+
+          // ensure parent is positioned so absolute button sits correctly
+          const parent = input.parentElement;
+          if (parent && !parent.classList.contains('input-with-toggle')) {
+            parent.classList.add('input-with-toggle');
+          }
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'password-toggle';
+          btn.setAttribute('aria-label', 'Show password');
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            if (input.type === 'password') {
+              input.type = 'text';
+              btn.setAttribute('aria-label', 'Hide password');
+              btn.style.opacity = '0.9';
+            } else {
+              input.type = 'password';
+              btn.setAttribute('aria-label', 'Show password');
+              btn.style.opacity = '1';
+            }
+            // keep focus on input after toggle
+            input.focus();
+          });
+
+          // append after input for layout; input parent should be positioned
+          if (parent) parent.appendChild(btn);
+        });
+      } catch (e) {
+        // silently ignore DOM errors
+        console.error('Password toggle init failed', e);
+      }
+    });
+  </script>
+  <script>
+    // Hover-to-play for videos with the 'hover-play' class. Disabled on touch devices.
+    document.addEventListener('DOMContentLoaded', function(){
+      // Skip on touch-enabled devices (no hover)
+      if(('ontouchstart' in window) || navigator.maxTouchPoints > 0) return;
+
+      const vids = document.querySelectorAll('video.hover-play');
+      vids.forEach(v => {
+        // Ensure muted so browsers allow autoplay
+        v.muted = true;
+
+        v.addEventListener('mouseenter', async () => {
+          try { await v.play(); } catch(e) { /* ignore */ }
+        });
+        v.addEventListener('mouseleave', () => {
+          try { v.pause(); v.currentTime = 0; } catch(e) { /* ignore */ }
+        });
+      });
+    });
+  </script>
+  <script>
+    // Autoplay-enabled videos manager
+    // - Autoplays videos with class 'autoplay-video' muted by default
+    // - Adds a mute/unmute overlay button so users can enable sound
+    // - Pauses videos when scrolled out of view using IntersectionObserver
+    document.addEventListener('DOMContentLoaded', function(){
+      // don't run on touch devices that may have different UX
+      const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+      const videos = Array.from(document.querySelectorAll('video.autoplay-video'));
+      if(!videos.length) return;
+
+      // Create observer to pause/play based on visibility
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const vid = entry.target;
+          if(entry.isIntersecting) {
+            // try autoplay (muted required for autoplay to succeed)
+            try { vid.play().catch(()=>{}); } catch(e){ }
+          } else {
+            try { vid.pause(); } catch(e){}
+          }
+        });
+      }, { threshold: 0.5 });
+
+      videos.forEach(vid => {
+        // ensure attributes
+        vid.setAttribute('playsinline','');
+        vid.setAttribute('preload','metadata');
+        vid.setAttribute('loop','');
+        // Start muted; user can unmute using button
+        if (!('muted' in vid) || vid.muted === false) vid.muted = true;
+
+        // Start playback if allowed
+        try { vid.play().catch(()=>{}); } catch(e){}
+
+        // add mute/unmute button unless on touch-only devices where native controls may be preferred
+        try {
+          const wrapper = vid.parentElement;
+          if (wrapper && !wrapper.classList.contains('autoplay-wrapper')) wrapper.classList.add('autoplay-wrapper', 'relative');
+
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'video-mute-btn absolute right-2 bottom-2 bg-black/60 text-white rounded-full p-1';
+          btn.setAttribute('aria-label', vid.muted ? 'Unmute' : 'Mute');
+          btn.innerHTML = vid.muted ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M23 9c-1.1 2.2-2.9 4-5 5"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M16.5 9.4a5 5 0 0 1 0 5.2"/><path d="M19.5 7c2 2.6 2 6 0 8.1"/></svg>';
+
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            vid.muted = !vid.muted;
+            btn.setAttribute('aria-label', vid.muted ? 'Unmute' : 'Mute');
+            // update icon
+            btn.innerHTML = vid.muted ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M23 9c-1.1 2.2-2.9 4-5 5"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M16.5 9.4a5 5 0 0 1 0 5.2"/><path d="M19.5 7c2 2.6 2 6 0 8.1"/></svg>';
+            // when unmuting, attempt to play with sound
+            if(!vid.muted){ try { vid.play().catch(()=>{}); } catch(e){} }
+          });
+
+          // append button to wrapper
+          if (wrapper) wrapper.appendChild(btn);
+        } catch (e) {
+          // ignore button failures
+          console.error('Autoplay button failed', e);
+        }
+
+        // observe video visibility
+        try { observer.observe(vid); } catch(e) {}
+      });
+
+      // tidy up on page unload
+      window.addEventListener('beforeunload', function(){
+        observer.disconnect();
+        videos.forEach(v => { try{ v.pause(); }catch(e){} });
+      });
+    });
+  </script>
+  <style>
+    /* Styling for video mute/unmute overlay button */
+    .video-mute-btn { z-index: 30; backdrop-filter: blur(6px); }
+    .autoplay-wrapper video { display: block; }
+    /* Chat mobile centering: ensure chat panels are centered and usable on narrow screens */
+    @media (max-width: 640px) {
+      #chat-panel {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: 92% !important;
+        bottom: 8% !important;
+      }
+      #chat-contacts-panel {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: 92% !important;
+        bottom: 16% !important;
+      }
+      /* Slightly larger chat toggle for touch screens */
+      #chat-toggle { right: 1rem !important; bottom: 1rem !important; }
+      #chat-messages { max-height: 50vh !important; }
+    }
+  </style>
+  
+  <!-- Sidebar toggle script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      if(sidebarToggle && sidebar){
+        sidebarToggle.addEventListener('click', function(){
+          sidebar.classList.toggle('-translate-x-full');
+        });
+        // Close sidebar when a link is clicked on mobile
+        sidebar.addEventListener('click', function(e){
+          if(e.target.tagName === 'A'){
+            sidebar.classList.add('-translate-x-full');
+          }
+        });
+      }
+    });
+  </script>
+  
+  <!-- Close main flex-col and flex container -->
+    </main>
+    </div>
+  </div>
+  <!-- Theme selection removed; site uses dark mode by default -->
+</body>
+</html>

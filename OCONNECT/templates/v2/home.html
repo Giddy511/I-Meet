@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 gap-6">
+	{% for m in media %}
+			<div class="p-4 rounded shadow" data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-black text-white">
+			<!-- Header: creator profile, title and caption -->
+			<div class="flex items-center gap-3 mb-3">
+				<a href="{{ url_for('creator_profile', user_id=m.user_id) }}" class="block">
+					<div class="w-10 h-10 rounded-full overflow-hidden bg-gray-800 text-white flex items-center justify-center text-sm">
+						{{ m.username[0]|upper }}
+					</div>
+				</a>
+				<div>
+					<div class="font-semibold"><a href="{{ url_for('creator_profile', user_id=m.user_id) }}">{{ m.username }}</a></div>
+					<div class="text-sm text-black">{{ m.title }}</div>
+				</div>
+				<!-- Follow button for consumers -->
+				<div class="ml-auto">
+					{% if session.get('logged_in') and session.get('role') == 'Consumer' and session.get('id') != m.user_id %}
+						<form method="post" action="{{ url_for('follow_creator', creator_id=m.user_id) }}">
+							<button class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
+								{% if m.user_id in following %}Unfollow{% else %}Follow{% endif %}
+							</button>
+						</form>
+					{% endif %}
+				</div>
+			</div>
+
+			{% if m.caption %}
+			<div class="mb-3 text-sm text-black">{{ m.caption }}</div>
+			{% endif %}
+
+			<!-- Content -->
+			<div class="mb-3">
+				{% if m.filename %}
+					<!-- Media frame: constrain to a square frame (max 1080x1080) -->
+					<div class="media-frame w-full mx-auto overflow-hidden bg-black rounded" style="max-width:1080px; aspect-ratio:1/1;">
+						<a href="{{ url_for('media_detail', media_id=m.id) }}">
+							{% set ext = m.filename.rsplit('.',1)[-1].lower() if m.filename and '.' in m.filename else '' %}
+							{% if ext in ['mp4','webm','mov','ogg'] %}
+								<video src="{{ url_for('uploads', filename=m.filename) }}" class="object-cover w-full h-full autoplay-video" muted playsinline preload="metadata" loop></video>
+							{% else %}
+								<img src="{{ url_for('uploads', filename=m.filename) }}" class="object-cover w-full h-full" />
+							{% endif %}
+						</a>
+					</div>
+				{% endif %}
+			</div>
+
+			<!-- Actions and counts at bottom -->
+			<div class="mt-2">
+				{% if session.get('logged_in') and session.get('role') == 'Consumer' %}
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-4">
+						<form method="post" action="{{ url_for('media_detail', media_id=m.id) }}" class="flex gap-2">
+							<input type="hidden" name="action" value="react">
+							<!-- <button name="reaction" value="thumbs_up" title="Like" class="text-2xl">👍</button>
+							<button name="reaction" value="thumbs_down" title="Hate" class="text-2xl">👎</button> -->
+							<button name="reaction" value="heart" title="Love" class="text-2xl">❤️</button>
+							<button name="reaction" value="laugh" title="Haha" class="text-2xl">😂</button>
+							<button name="reaction" value="wow" title="Wow" class="text-2xl">😮</button>
+						</form>
+
+						<form method="post" action="{{ url_for('media_detail', media_id=m.id) }}" class="flex items-center gap-2">
+							<input type="hidden" name="action" value="rate">
+							<div class="rating flex items-center">
+								<label class="cursor-pointer text-2xl"><input type="radio" name="rating" value="5" class="hidden">★</label>
+								<label class="cursor-pointer text-2xl"><input type="radio" name="rating" value="4" class="hidden">★</label>
+								<label class="cursor-pointer text-2xl"><input type="radio" name="rating" value="3" class="hidden">★</label>
+								<label class="cursor-pointer text-2xl"><input type="radio" name="rating" value="2" class="hidden">★</label>
+								<label class="cursor-pointer text-2xl"><input type="radio" name="rating" value="1" class="hidden">★</label>
+							</div>
+							<button class="bg-yellow-500 text-black px-3 py-1 rounded">Rate</button>
+						</form>
+					</div>
+<br><br>
+
+					
+				</div>
+
+				<!-- Share action -->
+				<div class="mt-2">
+				  <button class="share-btn bg-gray-700 text-white px-3 py-1 rounded text-sm" data-media-id="{{ m.id }}" data-media-url="{{ url_for('media_detail', media_id=m.id, _external=True) }}">Share</button>
+				</div>
+					<div class="text-sm text-gray-400">
+						💬 {{ m.comments_count }} &nbsp;&nbsp; 🔁 {{ m.reactions_count }}
+						{% if m.rating_avg %} &nbsp;&nbsp; ★ {{ m.rating_avg }}{% endif %}
+					</div>
+				<form method="post" action="{{ url_for('media_detail', media_id=m.id) }}" class="mt-3 flex gap-2">
+					<input type="hidden" name="action" value="comment">
+					<input name="comment" placeholder="Add a comment..." class="flex-1 rounded px-3 py-2 text-sm bg-gray-900 text-white border border-gray-700">
+					<button class="bg-gray-800 text-white px-3 py-1 rounded">Comment</button>
+				</form>
+				{% elif session.get('logged_in') and session.get('role') == 'creator' %}
+				<div class="text-sm text-gray-400">Post view only for creators.</div>
+				{% else %}
+				<div class="text-sm text-gray-400"> <a href="{{ url_for('Login') }}" class="text-blue-400 underline">Login</a> to comment, rate or react</div>
+				{% endif %}
+			</div>
+		</div>
+	{% else %}
+		<div class="bg-black text-white p-4 rounded shadow">No media yet</div>
+	{% endfor %}
+</div>
+{% endblock %}
