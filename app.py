@@ -39,6 +39,29 @@ app.secret_key = 'jvjjjgccgcgchvkj67'
 # make session persistent for a reasonable period
 app.permanent_session_lifetime = timedelta(days=7)
 
+# Ensure the Flask instance path exists and provide a stable DB location that
+# is suitable for hosting environments (e.g., Azure App Service). Use an
+# environment variable `OCONNECT_DB` to override when needed.
+try:
+    os.makedirs(app.instance_path, exist_ok=True)
+except Exception:
+    # If instance_path cannot be created, fall back to current directory
+    pass
+
+# Default DB path (can be overridden by setting OCONNECT_DB env var)
+DB_PATH = os.getenv('OCONNECT_DB') or os.path.join(app.instance_path or '.', 'Instagram.db')
+
+# Override sqlite3.connect to default to our DB_PATH when callers use the
+# legacy literal 'Instagram.db' or omit an explicit path. This keeps the rest
+# of the codebase unchanged while ensuring the DB lives in a writable folder.
+_original_sqlite_connect = sqlite3.connect
+def _sqlite_connect_override(path=None, *args, **kwargs):
+    # If caller passed a path that looks like the legacy DB name, replace it
+    if not path or (isinstance(path, str) and os.path.basename(path) == 'Instagram.db'):
+        path = DB_PATH
+    return _original_sqlite_connect(path, *args, **kwargs)
+sqlite3.connect = _sqlite_connect_override
+
 # serializer for password reset tokens
 serializer = URLSafeTimedSerializer(app.secret_key)
 
@@ -407,7 +430,7 @@ def get_variant_features(variant: str):
 
 @app.route('/')
 def landing():
-    return render_variant('land.html')
+    return render_template('land.html')
 
 
 def role_required(role):
