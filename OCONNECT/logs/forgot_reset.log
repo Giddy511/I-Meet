@@ -1,2 +1,0 @@
-2025-11-13 10:56:55,260 INFO SMTP not configured; host=None port=None; cannot send email to giddy986@gmail.com
-2025-11-13 10:56:55,262 WARNING Failed to send reset email to giddy986@gmail.com for user id 3 (request from 127.0.0.1)
