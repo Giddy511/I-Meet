@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign up{% endblock %}
+
+{% block content %}
+<div class=" flex items-center justify-center px-1 py-12">
+    <!-- <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <div class="relative w-80 h-96">
+                <div class="absolute left-6 top-12 w-80 h-96 rounded-xl overflow-hidden shadow-2xl bg-cover bg-center" style="background-image: url('/static/uploads/download.webp')"></div>
+
+                <div class="absolute -left-6 -top-6 w-64 h-40 rounded-xl overflow-hidden shadow-lg transform rotate-3 bg-cover bg-center" style="background-image: url('/static/uploads/OIP\ \(1\).webp')"></div>
+                <div class="absolute -right-14 -top-6 w-64 h-40 rounded-xl overflow-hidden shadow-lg transform -rotate-6 bg-cover bg-center" style="background-image: url('/static/uploads/OIP.webp')"></div>
+            </div>
+        </div> -->
+
+        <div class="flex flex-col items-center">
+            <div class="w-full max-w-sm p-6 rounded-lg shadow" data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-black text-white">
+                <h1 class="text-3xl font-sans font-extrabold text-center mb-4" data-admin-theme-light="text-black" data-admin-theme-dark="text-white">CONNECT</h1>
+                <p class="text-sm mb-4 text-center" data-admin-theme-light="text-gray-700" data-admin-theme-dark="text-white">Sign up to see photos and videos from your friends.</p>
+
+                <form action="{{ url_for('signup') }}" method="post" class="space-y-3">
+                    <input class="w-full border rounded px-3 py-2 text-sm" type="text" name="Username" placeholder="Username" required>
+                    <input class="w-full border rounded px-3 py-2 text-sm" type="text" name="Email" placeholder="Email" required>
+                    <input class="w-full border rounded px-3 py-2 text-sm" type="password" name="Password" placeholder="Password" required>
+                    <input type="hidden" name="Role" value="Consumer">
+                    <button class="w-full bg-blue-600 text-white py-2 rounded text-sm">Sign up</button>
+                </form>
+            </div>
+            <hr><hr>
+
+            <div class="mt-4 w-full max-w-sm p-4 rounded shadow text-center" data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-black text-white">
+                <span class="text-sm"> <a href="{{ url_for('Login') }}" class="underline font-semibold" data-admin-theme-light="text-blue-600" data-admin-theme-dark="text-blue-400">Have an account? Log in</a></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

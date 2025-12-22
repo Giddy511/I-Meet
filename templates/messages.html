@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Messages{% endblock %}
+
+{% block content %}
+<div class="p-6 rounded shadow" data-admin-theme-light="bg-white text-black" data-admin-theme-dark="bg-black text-white">
+  <h2 class="text-xl font-semibold mb-4">Messages</h2>
+  {% if convs %}
+    <ul class="space-y-3">
+      {% for c in convs %}
+        <li class="p-3 border rounded flex items-center justify-between">
+          <div>
+            <a href="{{ url_for('conversation', other_id=c.other_id) }}" class="font-semibold">{{ c.username }}</a>
+            <div class="text-sm text-gray-600">{{ c.latest_body }}</div>
+          </div>
+          <div class="text-sm text-gray-500">{{ c.latest_at }}</div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div>No conversations yet.</div>
+  {% endif %}
+</div>
+{% endblock %}
