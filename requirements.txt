@@ -13,7 +13,7 @@ eventlet==0.33.3
 python-pptx==0.6.21
 
 # Image handling required by python-pptx
-Pillow==9.5.0
+Pillow>=9.5,<11
 
 # Security / utilities (Flask pulls these in, but pinning helps reproducible installs)
 itsdangerous==2.1.2
@@ -22,4 +22,5 @@ Jinja2==3.1.2
 
 # Production WSGI server (optional for deployment)
 gunicorn==20.1.0
+
 
